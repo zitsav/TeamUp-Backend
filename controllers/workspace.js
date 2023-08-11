@@ -100,6 +100,18 @@ const getWorkspaceById = async (req, res) => {
       where: {
         id: parseInt(id),
       },
+      include: {
+        members: true,
+        boards: {
+          include: {
+            cards: {
+              include: {
+                lists: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!workspace) {

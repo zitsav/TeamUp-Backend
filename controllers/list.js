@@ -5,15 +5,38 @@ const { BadRequestError } = require('../errors');
 
 const createList = async (req, res) => {
   const { userId } = req.user;
-  const { title, board_id, position } = req.body;
+  const { title, card_id} = req.body;
   
   try {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestError('User not found, try logging in again');
+    }
+
+    if (!card_id) {
+      throw new BadRequestError('Card id is required');
+    }
+
+    const card = await prisma.card.findUnique({
+      where: {
+        id: parseInt(card_id),
+      },
+    });
+
+    if (!card) {
+      throw new BadRequestError('Card not found');
+    }
+
     const newList = await prisma.list.create({
       data: {
         title,
-        position,
-        board: {
-          connect: { id: board_id },
+        Card: {
+          connect: { id: parseInt(card_id) },
         },
       },
     });

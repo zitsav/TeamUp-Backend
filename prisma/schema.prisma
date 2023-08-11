@@ -32,7 +32,6 @@ model Board {
   title       String     @db.Text
   workspaceId Int        @db.Integer
   description String?    @db.Text
-  position    Int        @db.Integer
   createdAt   DateTime   @db.Timestamp @default(now())
   updatedAt   DateTime   @db.Timestamp @default(now())
 
@@ -45,7 +44,6 @@ model Card {
   title       String     @db.Text
   description String?    @db.Text
   boardId     Int        @db.Integer
-  position    Int        @db.Integer
   createdAt   DateTime   @db.Timestamp @default(now())
   updatedAt   DateTime   @db.Timestamp @default(now())
 
@@ -57,7 +55,6 @@ model List {
   id          Int        @id @default(autoincrement())
   title       String     @db.Text
   cardId      Int        @db.Integer
-  position    Int        @db.Integer
   isDone      Boolean    @db.Boolean @default(false)
   createdAt   DateTime   @db.Timestamp @default(now())
   updatedAt   DateTime   @db.Timestamp @default(now())

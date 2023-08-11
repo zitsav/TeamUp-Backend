@@ -5,7 +5,7 @@ const { BadRequestError } = require('../errors');
 
 const createBoard = async (req, res) => {
   const { userId } = req.user;
-  const { title, description } = req.body;
+  const { title, description, workspaceId } = req.body;
 
   try {
     const user = await prisma.user.findUnique({
@@ -18,12 +18,26 @@ const createBoard = async (req, res) => {
       throw new BadRequestError('User not found, try logging in again');
     }
 
+    if (!workspaceId) {
+      throw new BadRequestError('WorkspaceId is required');
+    }
+
+    const workspace = await prisma.workspace.findUnique({
+      where: {
+        id: parseInt(workspaceId),
+      },
+    });
+
+    if (!workspace) {
+      throw new BadRequestError('Workspace not found');
+    }
+
     const newBoard = await prisma.board.create({
       data: {
         title,
         description,
-        user: {
-          connect: { id: userId },
+        Workspace: {
+          connect: { id: parseInt(workspaceId) },
         },
       },
     });
