@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.Text
+  profile     String?       @db.Text
+  email       String        @db.Text @unique
+  passwordHash String        @db.Text
+  createdAt   DateTime      @db.Timestamp @default(now())
+  updatedAt   DateTime      @db.Timestamp @default(now())
+  workspaces  WorkspaceMember[] @relation("UserWorkspaceMembers")
+}
+
+model Workspace {
+  id        Int        @id @default(autoincrement())
+  title     String     @db.Text
+  createdAt DateTime   @db.Timestamp @default(now())
+  updatedAt DateTime   @db.Timestamp @default(now())
+  members   WorkspaceMember[] @relation("WorkspaceWorkspaceMembers")
+  boards    Board[]
+}
+
+model Board {
+  id          Int        @id @default(autoincrement())
+  title       String     @db.Text
+  workspaceId Int        @db.Integer
+  description String?    @db.Text
+  position    Int        @db.Integer
+  createdAt   DateTime   @db.Timestamp @default(now())
+  updatedAt   DateTime   @db.Timestamp @default(now())
+
+  Workspace   Workspace  @relation(fields: [workspaceId], references: [id])
+  cards       Card[]
+}
+
+model Card {
+  id          Int        @id @default(autoincrement())
+  title       String     @db.Text
+  description String?    @db.Text
+  boardId     Int        @db.Integer
+  position    Int        @db.Integer
+  createdAt   DateTime   @db.Timestamp @default(now())
+  updatedAt   DateTime   @db.Timestamp @default(now())
+
+  Board       Board      @relation(fields: [boardId], references: [id])
+  lists       List[]
+}
+
+model List {
+  id          Int        @id @default(autoincrement())
+  title       String     @db.Text
+  cardId      Int        @db.Integer
+  position    Int        @db.Integer
+  isDone      Boolean    @db.Boolean @default(false)
+  createdAt   DateTime   @db.Timestamp @default(now())
+  updatedAt   DateTime   @db.Timestamp @default(now())
+
+  Card        Card       @relation(fields: [cardId], references: [id])
+}
+
+model WorkspaceMember {
+  id          Int        @id @default(autoincrement())
+  userId      Int        @db.Integer
+  workspaceId Int        @db.Integer
+  createdAt   DateTime   @db.Timestamp @default(now())
+
+  User        User       @relation("UserWorkspaceMembers", fields: [userId], references: [id])
+  Workspace   Workspace  @relation("WorkspaceWorkspaceMembers", fields: [workspaceId], references: [id])
+}
