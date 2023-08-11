@@ -66,7 +66,11 @@ const login = async (req, res) => {
 
         const token = createJWT(user.id);
 
-        res.status(StatusCodes.OK).json({ user: { name: user.name }, token });
+        res.status(StatusCodes.OK).json({
+            name: user.name,
+            profile: user.profile, // Assuming profile information is stored in the user object
+            token
+        });
     } catch (error) {
         console.error('Error logging in:', error);
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' });

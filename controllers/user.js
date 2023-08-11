@@ -6,7 +6,7 @@ const { BadRequestError, UnauthenticatedError } = require('../errors');
 const updateUser = async (req, res) => {
   const { userId } = req.user;
   const { id } = req.params;
-  const { name, email } = req.body;
+  const { name, profile } = req.body;
 
   try {
     const user = await prisma.user.findUnique({
@@ -29,7 +29,7 @@ const updateUser = async (req, res) => {
       },
       data: {
         name,
-        email,
+        profile,
       },
     });
 
