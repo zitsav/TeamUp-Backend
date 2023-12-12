@@ -1,4 +1,4 @@
-# TeamUp
+# TeamUp Backend
 
 ## Overview
 
@@ -19,4 +19,4 @@ For testing purposes, use the following credentials:
 The live link for the backend is [here](https://long-gold-betta-slip.cyclic.cloud/).
 
 ## App
-App repository at [TeamUp-Backend](https://github.com/zitsav/TeamUp-Backend). The live link for the backend is [here](https://long-gold-betta-slip.cyclic.cloud/).
+App repository at [TeamUp](https://github.com/zitsav/TeamUp).
