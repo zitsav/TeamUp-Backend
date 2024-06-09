@@ -9,14 +9,15 @@ datasource db {
 }
 
 model User {
-  id          Int           @id @default(autoincrement())
-  name        String        @db.Text
-  profile     String?       @db.Text
-  email       String        @db.Text @unique
-  passwordHash String        @db.Text
-  createdAt   DateTime      @db.Timestamp @default(now())
-  updatedAt   DateTime      @db.Timestamp @default(now())
+  id          Int              @id @default(autoincrement())
+  name        String           @db.Text
+  profile     String?          @db.Text
+  email       String           @db.Text @unique
+  passwordHash String          @db.Text
+  createdAt   DateTime         @db.Timestamp @default(now())
+  updatedAt   DateTime         @db.Timestamp @default(now())
   workspaces  WorkspaceMember[] @relation("UserWorkspaceMembers")
+  adminOf     Workspace[]      @relation("WorkspaceAdmin")
 }
 
 model Workspace {
@@ -24,6 +25,9 @@ model Workspace {
   title     String     @db.Text
   createdAt DateTime   @db.Timestamp @default(now())
   updatedAt DateTime   @db.Timestamp @default(now())
+  adminId   Int        @db.Integer
+
+  admin     User       @relation("WorkspaceAdmin", fields: [adminId], references: [id])
   members   WorkspaceMember[] @relation("WorkspaceWorkspaceMembers")
   boards    Board[]
 }

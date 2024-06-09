@@ -21,6 +21,9 @@ const createWorkspace = async (req, res) => {
     const newWorkspace = await prisma.workspace.create({
       data: {
         title,
+        admin: {
+          connect: { id: userId },
+        },
         members: {
           create: {
             userId,
@@ -28,6 +31,7 @@ const createWorkspace = async (req, res) => {
         },
       },
       include: {
+        admin: true,
         members: true,
       },
     });
@@ -141,14 +145,17 @@ const editWorkspace = async (req, res) => {
       throw new BadRequestError('User not found, try logging in again');
     }
 
-    const workspaceMember = await prisma.workspaceMember.findFirst({
+    const workspace = await prisma.workspace.findUnique({
       where: {
-        userId,
-        workspaceId: parseInt(id),
+        id: parseInt(id),
       },
     });
 
-    if (!workspaceMember) {
+    if (!workspace) {
+      throw new BadRequestError('Workspace not found');
+    }
+
+    if (workspace.adminId !== userId) {
       throw new BadRequestError('User is not authorized to edit this workspace');
     }
 
@@ -183,14 +190,17 @@ const removeWorkspace = async (req, res) => {
       throw new BadRequestError('User not found, try logging in again');
     }
 
-    const workspaceMember = await prisma.workspaceMember.findFirst({
+    const workspace = await prisma.workspace.findUnique({
       where: {
-        userId,
-        workspaceId: parseInt(id),
+        id: parseInt(id),
       },
     });
 
-    if (!workspaceMember) {
+    if (!workspace) {
+      throw new BadRequestError('Workspace not found');
+    }
+
+    if (workspace.adminId !== userId) {
       throw new BadRequestError('User is not authorized to delete this workspace');
     }
 

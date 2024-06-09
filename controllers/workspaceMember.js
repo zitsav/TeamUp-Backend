@@ -5,7 +5,7 @@ const { BadRequestError } = require('../errors');
 
 const addWorkspaceMember = async (req, res) => {
   const { userId } = req.user;
-  const { workspaceId, memberId } = req.body;
+  const { workspaceId, email } = req.body;
   
   try {
     const workspace = await prisma.workspace.findUnique({
@@ -17,28 +17,13 @@ const addWorkspaceMember = async (req, res) => {
       throw new BadRequestError('Workspace not found');
     }
 
-    const user = await prisma.user.findUnique({
-      where: {
-        id: parseInt(userId),
-      },
-    });
-    if (!user) {
-      throw new BadRequestError('User not found, try logging in again');
-    }
-
-    const isUserInWorkspace = await prisma.workspaceMember.findFirst({
-      where: {
-        userId: parseInt(userId),
-        workspaceId: parseInt(workspaceId),
-      },
-    });
-    if (!isUserInWorkspace){
+    if (workspace.adminId !== userId) {
       throw new BadRequestError('User not authorized to add a member');
     }
 
     const member = await prisma.user.findUnique({
       where: {
-        id: parseInt(memberId),
+        email: email,
       },
     });
     if (!member) {
@@ -47,7 +32,7 @@ const addWorkspaceMember = async (req, res) => {
 
     const newMember = await prisma.workspaceMember.create({
       data: {
-        userId: parseInt(memberId),
+        userId: member.id,
         workspaceId: parseInt(workspaceId),
       },
     });
@@ -73,36 +58,31 @@ const removeWorkspaceMember = async (req, res) => {
       throw new BadRequestError('Workspace not found');
     }
 
-    const user = await prisma.user.findUnique({
-      where: {
-        id: parseInt(userId),
-      },
-    });
-    if (!user) {
-      throw new BadRequestError('User not found, try logging in again');
-    }
-
-    const isUserInWorkspace = await prisma.workspaceMember.findFirst({
-      where: {
-        userId: parseInt(userId),
-        workspaceId: parseInt(workspaceId),
-      },
-    });
-    if (!isUserInWorkspace){
+    if (workspace.adminId !== userId) {
       throw new BadRequestError('User is not permitted to remove a member from the workspace');
     }
 
-    const deletedMember = await prisma.workspaceMember.delete({
+    const member = await prisma.user.findUnique({
       where: {
         id: parseInt(memberId),
       },
     });
+    if (!member) {
+      throw new BadRequestError('User not found');
+    }
 
-    if (!deletedMember) {
+    const deletedMember = await prisma.workspaceMember.deleteMany({
+      where: {
+        userId: member.id,
+        workspaceId: parseInt(workspaceId),
+      },
+    });
+
+    if (deletedMember.count === 0) {
       throw new BadRequestError('Workspace member not found');
     }
 
-    res.status(StatusCodes.OK).json({ member: deletedMember });
+    res.status(StatusCodes.OK).json({ message: 'Member removed successfully' });
   } catch (error) {
     console.error('Error removing workspace member:', error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' });
