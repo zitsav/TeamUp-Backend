@@ -15,4 +15,8 @@ router.delete('/:id', cardController.deleteCard);
 
 router.get('/board/:id', cardController.getAllCardsInBoard);
 
+router.put('/position/:id', cardController.changeCardPosition);
+
+router.put('/move/:id', cardController.moveCardToDifferentBoard);
+
 module.exports = router;

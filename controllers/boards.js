@@ -26,19 +26,34 @@ const createBoard = async (req, res) => {
       where: {
         id: parseInt(workspaceId),
       },
+      include: {
+        members: true,
+      },
     });
 
     if (!workspace) {
       throw new BadRequestError('Workspace not found');
     }
 
+    if (workspace.adminId !== userId) {
+      throw new BadRequestError('User is not authorized to create a board in this workspace');
+    }
+
     const newBoard = await prisma.board.create({
       data: {
         title,
         description,
-        Workspace: {
-          connect: { id: parseInt(workspaceId) },
-        },
+        workspaceId: parseInt(workspaceId),
+        position: workspace.lastPosition + 1,
+      },
+    });
+
+    await prisma.workspace.update({
+      where: {
+        id: parseInt(workspaceId),
+      },
+      data: {
+        lastPosition: workspace.lastPosition + 1,
       },
     });
 
@@ -64,25 +79,27 @@ const getBoard = async (req, res) => {
       throw new BadRequestError('User not found, try logging in again');
     }
 
-    const boardMember = await prisma.boardMember.findFirst({
-      where: {
-        userId,
-        boardId: parseInt(id),
-      },
-    });
-
-    if (!boardMember) {
-      throw new BadRequestError('User is not authorized to view this board');
-    }
-
     const board = await prisma.board.findUnique({
       where: {
         id: parseInt(id),
+      },
+      include: {
+        Workspace: {
+          include: {
+            members: true,
+          },
+        },
       },
     });
 
     if (!board) {
       throw new BadRequestError('Board not found');
+    }
+
+    const isMember = board.Workspace.members.some(member => member.userId === userId);
+
+    if (!isMember) {
+      throw new BadRequestError('User is not authorized to view this board');
     }
 
     res.status(StatusCodes.OK).json({ board });
@@ -108,15 +125,25 @@ const updateBoard = async (req, res) => {
       throw new BadRequestError('User not found, try logging in again');
     }
 
-    const boardMember = await prisma.boardMember.findFirst({
+    const board = await prisma.board.findUnique({
       where: {
-        userId,
-        boardId: parseInt(id),
+        id: parseInt(id),
+      },
+      include: {
+        Workspace: {
+          include: {
+            members: true,
+          },
+        },
       },
     });
 
-    if (!boardMember) {
-      throw new BadRequestError('User is not authorized to view this board');
+    if (!board) {
+      throw new BadRequestError('Board not found');
+    }
+
+    if (board.Workspace.adminId !== userId) {
+      throw new BadRequestError('User is not authorized to update this board');
     }
 
     const updatedBoard = await prisma.board.update({
@@ -128,10 +155,6 @@ const updateBoard = async (req, res) => {
         description,
       },
     });
-
-    if (!updatedBoard) {
-      throw new BadRequestError('Board not found');
-    }
 
     res.status(StatusCodes.OK).json({ board: updatedBoard });
   } catch (error) {
@@ -155,28 +178,34 @@ const deleteBoard = async (req, res) => {
       throw new BadRequestError('User not found, try logging in again');
     }
 
-    const boardMember = await prisma.boardMember.findFirst({
+    const board = await prisma.board.findUnique({
       where: {
-        userId,
-        boardId: parseInt(id),
+        id: parseInt(id),
+      },
+      include: {
+        Workspace: {
+          include: {
+            members: true,
+          },
+        },
       },
     });
 
-    if (!boardMember) {
-      throw new BadRequestError('User is not authorized to view this board');
+    if (!board) {
+      throw new BadRequestError('Board not found');
     }
 
-    const deletedBoard = await prisma.board.delete({
+    if (board.Workspace.adminId !== userId) {
+      throw new BadRequestError('User is not authorized to delete this board');
+    }
+
+    await prisma.board.delete({
       where: {
         id: parseInt(id),
       },
     });
 
-    if (!deletedBoard) {
-      throw new BadRequestError('Board not found');
-    }
-
-    res.status(StatusCodes.OK).json({ board: deletedBoard });
+    res.status(StatusCodes.OK).json({ message: 'Board deleted successfully' });
   } catch (error) {
     console.error('Error deleting board:', error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' });
@@ -198,9 +227,31 @@ const getAllBoardsInWorkspace = async (req, res) => {
       throw new BadRequestError('User not found, try logging in again');
     }
 
+    const workspace = await prisma.workspace.findUnique({
+      where: {
+        id: parseInt(workspaceId),
+      },
+      include: {
+        members: true,
+      },
+    });
+
+    if (!workspace) {
+      throw new BadRequestError('Workspace not found');
+    }
+
+    const isMember = workspace.members.some(member => member.userId === userId);
+
+    if (!isMember) {
+      throw new BadRequestError('User is not a member of this workspace');
+    }
+
     const boards = await prisma.board.findMany({
       where: {
         workspaceId: parseInt(workspaceId),
+      },
+      orderBy: {
+        position: 'asc',
       },
     });
 

@@ -7,4 +7,6 @@ router.use(authMiddleware);
 
 router.put('/:id', userController.updateUser);
 
+router.post('/profile/:id', userController.uploadProfilePicture);
+
 module.exports = router;

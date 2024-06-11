@@ -5,11 +5,15 @@ const authRoutes = require('./routes/auth')
 const boardRoutes = require('./routes/boards')
 const cardRoutes = require('./routes/card')
 const userRoutes = require('./routes/user')
-const listRoutes = require('./routes/list')
 const workspaceRoutes = require('./routes/workspace')
 const workspaceMemberRoutes = require('./routes/workspaceMember')
+const fileUpload = require('express-fileupload')
 
-const port = 3000;
+const port = 3000 || process.env.PORT;
+
+app.use(express.static('./public'))
+app.use(express.json());
+app.use(fileUpload({useTempFiles: true}))
 
 app.use(cors());
 app.use(express.json());
@@ -17,7 +21,6 @@ app.use(express.json());
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/board', boardRoutes);
 app.use('/api/v1/card', cardRoutes);
-app.use('/api/v1/list', listRoutes);
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/workspace', workspaceRoutes);
 app.use('/api/v1/workspaceMember', workspaceMemberRoutes);
