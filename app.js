@@ -9,7 +9,7 @@ const workspaceRoutes = require('./routes/workspace')
 const workspaceMemberRoutes = require('./routes/workspaceMember')
 const fileUpload = require('express-fileupload')
 
-const port = 3000 || process.env.PORT;
+const port = 5000 || process.env.PORT;
 
 app.use(express.static('./public'))
 app.use(express.json());
