@@ -46,8 +46,7 @@ model Card {
   image         String?
   boardId       Int
   deadline      String?
-  position      Int
-  color         String      @default("FFFFFF")         
+  position      Int     
 
   board         Board       @relation(fields: [boardId], references: [id])
   subtasks      Subtask[]

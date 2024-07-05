@@ -5,7 +5,7 @@ const { BadRequestError } = require('../errors');
 
 const createCard = async (req, res) => {
   const { userId } = req.user
-  const { title, board_id, deadline, description, color, image } = req.body
+  const { title, board_id, deadline, description, image } = req.body
 
   try {
     const user = await prisma.user.findUnique({
@@ -49,7 +49,6 @@ const createCard = async (req, res) => {
       data: {
         title,
         description,
-        color,
         image,
         deadline,
         position: lastPosition + 1,
