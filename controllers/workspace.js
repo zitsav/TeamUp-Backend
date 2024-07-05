@@ -4,77 +4,62 @@ const { StatusCodes } = require('http-status-codes');
 const { BadRequestError } = require('../errors');
 
 const createWorkspace = async (req, res) => {
-  const { userId } = req.user;
-  const { title } = req.body;
+  const {userId} = req.user
+  const {title, icon} = req.body
 
-  try {
+  try{
     const user = await prisma.user.findUnique({
       where: {
-        id: userId,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        profilePicture: true,
-      },
-    });
+        id: userId
+      }
+    })
 
     if (!user) {
-      throw new BadRequestError('User not found, try logging in again');
+      throw new BadRequestError("User not found, try logging in again")
     }
 
-    const newWorkspace = await prisma.workspace.create({
-      data: {
+    if (!title){
+      throw new BadRequestError("No title provided")
+    }
+
+    await prisma.workspace.create({
+      data:{
         title,
-        admin: {
-          connect: { id: userId },
-        },
+        icon,
         members: {
           create: {
-            userId,
-          },
+            userId
+          }
         },
         boards: {
           create: [
-            { title: 'ToDo', position: 1 },
-            { title: 'Ongoing', position: 2 },
-            { title: 'Finished', position: 3 }
+            {title: "ToDo"},
+            {title: "Ongoing"},
+            {title: "Finished"}
           ],
         },
-      },
-      include: {
-        admin: true,
-        members: true,
-        boards: true,
-      },
-    });
+      }
+    })
 
-    res.status(StatusCodes.CREATED).json({ workspace: newWorkspace, user });
+    res.status(StatusCodes.CREATED).json({message: "SUCCESS"})
   } catch (error) {
-    console.error('Error creating workspace:', error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' });
+    console.error(error)
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Internal server error"})
   }
 };
 
 const getAllWorkspaces = async (req, res) => {
-  const { userId } = req.user;
+  const {userId} = req.user
 
-  try {
+  try{
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        profilePicture: true,
-      },
-    });
+      }
+    })
 
-    if (!user) {
-      throw new BadRequestError('User not found, try logging in again');
+    if (!user){
+      throw new BadRequestError("User not found, try logging in again")
     }
 
     const workspaces = await prisma.workspace.findMany({
@@ -82,177 +67,282 @@ const getAllWorkspaces = async (req, res) => {
         members: {
           some: {
             userId,
-          },
-        },
+          }
+        }
       },
       select: {
         id: true,
         title: true,
-        members: true,
-      },
-    });
+        icon: true,
+        members: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                profile: true,
+              },
+            },    
+          }
+        }
+      }
+    })
 
-    res.status(StatusCodes.OK).json({ workspaces, user });
-  } catch (error) {
-    console.error('Error getting workspaces:', error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' });
+    res.status(StatusCodes.OK).json({workspaces});
+  }
+  catch (error){
+    console.error(error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({message: "Internal server error"})
   }
 };
 
 const getWorkspaceById = async (req, res) => {
-  const { userId } = req.user;
-  const { id } = req.params;
+  const {userId} = req.user
+  const id = parseInt(req.params.id)
 
-  try {
+  try{
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        profilePicture: true,
-      },
-    });
+      }
+    })
 
-    if (!user) {
-      throw new BadRequestError('User not found, try logging in again');
+    if (!user){
+      throw new BadRequestError("User not found, try logging in again")
     }
 
-    const workspaceMember = await prisma.workspaceMember.findFirst({
+    const isMember = await prisma.workspace.findFirst({
       where: {
-        userId,
-        workspaceId: parseInt(id),
-      },
-    });
-
-    if (!workspaceMember) {
-      throw new BadRequestError('User is not authorized to view this workspace');
-    }
-
-    const workspace = await prisma.workspace.findUnique({
-      where: {
-        id: parseInt(id),
-      },
-      include: {
-        members: true,
-        boards: {
-          include: {
-            cards: true,
+        id: id,
+        members: {
+          some: {
+            userId: userId,
           },
         },
       },
-    });
+    })
 
-    if (!workspace) {
-      throw new BadRequestError('Workspace not found');
-    }
-
-    res.status(StatusCodes.OK).json({ workspace, user });
-  } catch (error) {
-    console.error('Error fetching workspace:', error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' });
-  }
-};
-
-const editWorkspace = async (req, res) => {
-  const { userId } = req.user;
-  const { id } = req.params;
-  const { title } = req.body;
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        profilePicture: true,
-      },
-    });
-
-    if (!user) {
-      throw new BadRequestError('User not found, try logging in again');
+    if (!isMember) {
+      throw new BadRequestError("User not allowed to view this workspace")
     }
 
     const workspace = await prisma.workspace.findUnique({
       where: {
-        id: parseInt(id),
+        id: id,
       },
-    });
+      include: {
+        members: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                profile: true,
+              },
+            },    
+          }
+        },
+        boards: {
+          include: {
+            cards: {
+              include: {
+                subtasks: true,
+                assignedUsers: {
+                  select: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        profile: true,
+                      },
+                    },    
+                  }
+                },
+              },
+            },
+          },
+        },
+      },
+    })
 
     if (!workspace) {
-      throw new BadRequestError('Workspace not found');
+      throw new BadRequestError("Workspace not found")
     }
 
-    if (workspace.adminId !== userId) {
-      throw new BadRequestError('User is not authorized to edit this workspace');
+    res.status(StatusCodes.OK).json({workspace})
+  }
+  catch (error){
+    console.error(error)
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({message: "Internal server error"})
+  }
+}
+
+const editWorkspace = async (req, res) => {
+  const {userId} = req.user
+  const id = parseInt(req.params.id)
+  const {title} = req.body
+
+  try{
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      }
+    })
+
+    if (!user){
+      throw new BadRequestError("User not found, try logging in again")
     }
 
-    const updatedWorkspace = await prisma.workspace.update({
+    const workspace = await prisma.workspace.findUnique({
+      where: {
+        id: id,
+      }
+    })
+
+    if (!workspace){
+      throw new BadRequestError("Workspace not found")
+    }
+
+    const isMember = await prisma.workspace.findFirst({
+      where: {
+        id: id,
+        members: {
+          some: {
+            userId: userId,
+          },
+        },
+      },
+    })
+
+    if (!isMember) {
+      throw new BadRequestError("User not allowed to view this workspace")
+    }
+
+    await prisma.workspace.update({
       where: {
         id: parseInt(id),
       },
       data: {
         title,
       },
-    });
+    })
 
-    res.status(StatusCodes.OK).json({ workspace: updatedWorkspace, user });
-  } catch (error) {
-    console.error('Error editing workspace:', error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' });
+    res.status(StatusCodes.OK).json({message: "SUCCESS"})
   }
-};
+  catch (error){
+    console.error(error)
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Internal server error"})
+  }
+}
 
 const removeWorkspace = async (req, res) => {
-  const { userId } = req.user;
-  const { id } = req.params;
+  const {userId} = parseInt(req.user)
+  const id = parseInt(req.params.id)
 
   try {
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        profilePicture: true,
-      },
-    });
+      }
+    })
 
     if (!user) {
-      throw new BadRequestError('User not found, try logging in again');
+      throw new BadRequestError("User not found, try logging in again")
     }
 
     const workspace = await prisma.workspace.findUnique({
       where: {
-        id: parseInt(id),
-      },
-    });
+        id: id
+      }
+    })
 
-    if (!workspace) {
-      throw new BadRequestError('Workspace not found');
+    if (!workspace){
+      throw new BadRequestError("Workspace not found")
     }
 
-    if (workspace.adminId !== userId) {
-      throw new BadRequestError('User is not authorized to delete this workspace');
+    const isMember = await prisma.workspace.findFirst({
+      where: {
+        id: id,
+        members: {
+          some: {
+            userId: userId,
+          },
+        },
+      },
+    })
+
+    if (!isMember) {
+      throw new BadRequestError("User not allowed to view this workspace")
     }
 
     await prisma.workspace.delete({
       where: {
-        id: parseInt(id),
+        id: id
       },
-    });
+    })
 
-    res.status(StatusCodes.OK).json({ message: 'Workspace deleted successfully', user });
+    res.status(StatusCodes.OK).json({message: "SUCCESS"})
+  }
+  catch (error){
+    console.error(error)
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({message: "Internal server error"})
+  }
+}
+
+const addWorkspaceMember = async (req, res) => {
+  const {userId} = req.user
+  const {workspaceId, email} = req.body
+  
+  try {
+    const workspace = await prisma.workspace.findUnique({
+      where: {
+        id: workspaceId
+      },
+    })
+
+    if (!workspace) {
+      throw new BadRequestError("Workspace not found")
+    }
+
+    const isMember = await prisma.workspace.findFirst({
+      where: {
+        id: workspaceId,
+        members: {
+          some: {
+            userId: userId,
+          },
+        },
+      },
+    })
+
+    if (!isMember) {
+      throw new BadRequestError("User not allowed to view this workspace")
+    }
+
+    const member = await prisma.user.findUnique({
+      where:{
+        email:email,
+      },
+    })
+
+    if (!member) {
+      throw new BadRequestError("User not found")
+    }
+
+    const newMember = await prisma.workspaceMember.create({
+      data:{
+        userId: member.id,
+        workspaceId: workspaceId
+      }
+    })
+
+    res.status(StatusCodes.CREATED).json({message: "SUCCESS"})
   } catch (error) {
-    console.error('Error deleting workspace:', error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' });
+    console.error(error)
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({message: "Internal server error"})
   }
 };
 
@@ -262,4 +352,5 @@ module.exports = {
   getWorkspaceById,
   editWorkspace,
   removeWorkspace,
+  addWorkspaceMember
 };

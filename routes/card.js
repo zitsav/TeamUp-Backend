@@ -1,22 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const cardController = require('../controllers/card');
+const {
+    createCard,
+    deleteCard,
+    changeCardPosition,
+    moveCardToDifferentBoard,
+    addCardMember
+} = require('../controllers/card');
 const authMiddleware = require('../middlewares/authentication');
 
-router.use(authMiddleware);
+router.use(authMiddleware)
 
-router.post('/', cardController.createCard);
+router.post('/', createCard)
 
-router.get('/:id', cardController.getCard);
+router.post('/user', addCardMember)
 
-router.put('/:id', cardController.updateCard);
+// router.put('/:id', cardController.updateCard)
 
-router.delete('/:id', cardController.deleteCard);
+router.delete('/:id', deleteCard)
 
-router.get('/board/:id', cardController.getAllCardsInBoard);
+router.put('/position/:id', changeCardPosition)
 
-router.put('/position/:id', cardController.changeCardPosition);
+router.put('/move/:id', moveCardToDifferentBoard)
 
-router.put('/move/:id', cardController.moveCardToDifferentBoard);
-
-module.exports = router;
+module.exports = router

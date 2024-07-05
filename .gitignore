@@ -1,2 +1,4 @@
 node_modules
 .env
+tmp
+google-services.json

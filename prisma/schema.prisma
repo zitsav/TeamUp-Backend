@@ -10,83 +10,75 @@ datasource db {
 
 model User {
   id               Int               @id @default(autoincrement())
-  name             String            @db.Text
-  email            String            @db.Text @unique
-  passwordHash     String            @db.Text
-  createdAt        DateTime          @db.Timestamp @default(now())
-  updatedAt        DateTime          @db.Timestamp @default(now())
-  workspaces       WorkspaceMember[] @relation("UserWorkspaceMembers")
-  adminOf          Workspace[]       @relation("WorkspaceAdmin")
-  startedCards     Card[]            @relation("UserStartedCards")
-  profilePicture   ProfilePicture?   @relation("UserProfilePicture")
-}
+  name             String
+  email            String            @unique
+  passwordHash     String
+  profile          String?
+  fcmToken         String?
 
-model ProfilePicture {
-  id       Int    @id @default(autoincrement())
-  publicID String
-  url      String
-  user     User   @relation("UserProfilePicture", fields: [id], references: [id])
-  userId   Int    @unique
+  workspaces       WorkspaceMember[] @relation("UserWorkspaceMembers")
+  assignedCards    CardUser[]        @relation("UserAssignedCards")
 }
 
 model Workspace {
-  id            Int              @id @default(autoincrement())
-  title         String           @db.Text
-  createdAt     DateTime         @db.Timestamp @default(now())
-  updatedAt     DateTime         @db.Timestamp @default(now())
-  adminId       Int              @db.Integer
-  lastPosition  Int              @default(3)
+  id            Int               @id @default(autoincrement())
+  title         String
+  icon          String?
 
-  admin         User             @relation("WorkspaceAdmin", fields: [adminId], references: [id])
-  members       WorkspaceMember[] @relation("WorkspaceWorkspaceMembers")
+  members       WorkspaceMember[] @relation("WorkspaceMembers")
   boards        Board[]
 }
 
 model Board {
   id            Int        @id @default(autoincrement())
-  title         String     @db.Text
-  workspaceId   Int        @db.Integer
-  createdAt     DateTime   @db.Timestamp @default(now())
-  updatedAt     DateTime   @db.Timestamp @default(now())
-  position      Int        
+  title         String
+  workspaceId   Int       
   lastPosition  Int        @default(0)
 
-  Workspace     Workspace  @relation(fields: [workspaceId], references: [id])
+  workspace     Workspace  @relation(fields: [workspaceId], references: [id])
   cards         Card[]
 }
 
 model Card {
-  id            Int        @id @default(autoincrement())
-  title         String     @db.Text
-  description   String?    @db.Text
-  boardId       Int        @db.Integer
-  startedBy     Int        @db.Integer
-  isDone        Boolean    @default(false)
-  color         Color      @default(WHITE)
-  startedAt     DateTime   @db.Timestamp @default(now())
-  deadline      String?     @db.Text
-  createdAt     DateTime   @db.Timestamp @default(now())
-  updatedAt     DateTime   @db.Timestamp @default(now())
-  position      Int        
+  id            Int         @id @default(autoincrement())
+  title         String
+  description   String?
+  image         String?
+  boardId       Int
+  deadline      String?
+  position      Int
+  color         String      @default("FFFFFF")         
 
-  Board         Board      @relation(fields: [boardId], references: [id])
-  User          User       @relation("UserStartedCards", fields: [startedBy], references: [id])
+  board         Board       @relation(fields: [boardId], references: [id])
+  subtasks      Subtask[]
+  assignedUsers CardUser[]  @relation("CardAssignedUsers")
+}
+
+model Subtask {
+  id            Int         @id @default(autoincrement())
+  title         String
+  isDone        Boolean     @default(false)
+  cardId        Int
+
+  card          Card        @relation(fields: [cardId], references: [id])
+}
+
+model CardUser {
+  cardId        Int
+  userId        Int
+
+  card          Card        @relation("CardAssignedUsers", fields: [cardId], references: [id], onDelete: Cascade)
+  user          User        @relation("UserAssignedCards", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, userId])
 }
 
 model WorkspaceMember {
-  id            Int        @id @default(autoincrement())
-  userId        Int        @db.Integer
-  workspaceId   Int        @db.Integer
-  createdAt     DateTime   @db.Timestamp @default(now())
+  userId        Int
+  workspaceId   Int
 
-  User          User       @relation("UserWorkspaceMembers", fields: [userId], references: [id])
-  Workspace     Workspace  @relation("WorkspaceWorkspaceMembers", fields: [workspaceId], references: [id])
-}
+  user          User       @relation("UserWorkspaceMembers", fields: [userId], references: [id])
+  workspace     Workspace  @relation("WorkspaceMembers", fields: [workspaceId], references: [id])
 
-enum Color {
-  RED
-  GREEN
-  BLUE
-  YELLOW
-  WHITE
+  @@id([userId, workspaceId])
 }

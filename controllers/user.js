@@ -1,120 +1,91 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { StatusCodes } = require('http-status-codes');
-const { BadRequestError, UnauthenticatedError } = require('../errors');
-const fs = require('fs');
-const cloudinary = require('cloudinary').v2;
-const dotenv = require('dotenv');
-const asyncHandler = require('express-async-handler');
-
-dotenv.config();
-
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
-});
+const { BadRequestError, UnauthenticatedError } = require('../errors')
 
 const updateUser = async (req, res) => {
-  const { userId } = req.user;
-  const { id } = req.params;
-  const { name, profile } = req.body;
+  const {userId} = req.user
+  const id = parseInt(req.params.id)
+  const {name, profile} = req.body
 
-  try {
+  try{
     const user = await prisma.user.findUnique({
       where: {
-        id: parseInt(id),
-      },
-    });
+        id: id
+      }
+    })
 
-    if (!user) {
-      throw new BadRequestError('User not found');
+    if (!user){
+      throw new BadRequestError("User not found")
     }
 
-    if (user.id !== parseInt(userId)) {
-      throw new UnauthenticatedError('Not authorized to update this user');
+    if (user.id !== userId) {
+      throw new UnauthenticatedError("Not authorized to update this user")
     }
 
-    const updatedUser = await prisma.user.update({
+    if (!name && !profile){
+      throw new BadRequestError("Missing paramters")
+    }
+
+    await prisma.user.update({
       where: {
-        id: parseInt(id),
+        id: id
       },
       data: {
         name,
         profile,
-      },
-    });
+      }
+    })
 
-    res.status(StatusCodes.OK).json({ user: updatedUser });
-  } catch (error) {
-    console.error('Error updating user:', error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' });
+    res.status(StatusCodes.OK).json({message: "SUCCESS"})
   }
-};
-
-const uploadProfilePicture = asyncHandler(async (req, res) => {
-  if (!req.files || !req.files.image) {
-    throw new BadRequestError('Image file not found');
+  catch (error){
+    console.error(error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({message: "Internal server error"})
   }
+}
 
-  const imageFile = req.files.image;
+const searchUsers = async (req, res) => {
+  const {query} = req.body
+
+  if (!query){
+    throw new BadRequestError("Search query is required")
+  }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          {
+            name: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+          {
+            email: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
       select: {
         id: true,
-        profilePicture: true,
+        name: true,
+        email: true,
+        profile: true,
       },
-    });
-
-    if (!user) {
-      throw new BadRequestError('User not found');
-    }
-
-    if (user.profilePicture && user.profilePicture.publicID) {
-      await cloudinary.uploader.destroy(user.profilePicture.publicID);
-    }
-
-    const result = await cloudinary.uploader.upload(imageFile.tempFilePath, {
-      use_filename: true,
-      folder: 'profile-pictures',
-    });
-
-    const image = {
-      publicID: result.public_id,
-      url: result.secure_url,
-      userId: user.id,
-    };
-
-    fs.unlinkSync(imageFile.tempFilePath);
-
-    const updatedUser = await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        profilePicture: {
-          upsert: {
-            create: image,
-            update: image,
-          },
-        },
-      },
-      include: {
-        profilePicture: true,
-      },
-    });
-
-    res.status(StatusCodes.OK).json({ profilePicture: updatedUser.profilePicture });
-  } catch (error) {
-    console.log(error);
-    if (fs.existsSync(imageFile.tempFilePath)) {
-      fs.unlinkSync(imageFile.tempFilePath);
-    }
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' });
+    })
+    res.status(StatusCodes.OK).json({users})
   }
-});
+  catch (error){
+    console.error(error)
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Internal server error"})
+  }
+}
 
 module.exports = {
   updateUser,
-  uploadProfilePicture,
-};
+  searchUsers
+}

@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const userController = require('../controllers/user');
+const {
+    updateUser,
+    searchUsers
+} = require('../controllers/user');
 const authMiddleware = require('../middlewares/authentication');
 
-router.use(authMiddleware);
+router.use(authMiddleware)
 
-router.put('/:id', userController.updateUser);
+router.put('/:id', updateUser)
 
-router.post('/profile/:id', userController.uploadProfilePicture);
+router.post('/search', searchUsers)
 
-module.exports = router;
+module.exports = router
