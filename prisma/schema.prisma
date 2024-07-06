@@ -45,7 +45,6 @@ model Card {
   description   String?
   image         String?
   boardId       Int
-  deadline      String?
   position      Int     
 
   board         Board       @relation(fields: [boardId], references: [id])
